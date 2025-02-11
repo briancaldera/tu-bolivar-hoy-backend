@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from firebase_admin import initialize_app, functions
 from firebase_functions import https_fn, options, tasks_fn
 from firebase_functions.options import RetryConfig
+from flask import jsonify
 from playhouse.db_url import connect
 
 from db import save_to_db
@@ -50,3 +51,40 @@ def initialize_db(req: tasks_fn.CallableRequest) -> bool:
     db.connect()
     db.create_tables([Currency])
     return db.close()
+
+
+@https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["get"]))
+def get_last_currencies(req: https_fn.Request) -> https_fn.Response:
+
+    currencies_name = [
+        "USD",
+        "EUR",
+        "RUB",
+        "CNY",
+        "TRY",
+    ]
+
+    currencies = []
+
+    for i, v in enumerate(currencies_name):
+
+        currency = (
+            Currency.select(
+                Currency.id, Currency.currency, Currency.rate, Currency.datetime
+            )
+            .where(Currency.currency == v)
+            .order_by(Currency.datetime.desc())
+            .limit(1)
+            .first()
+        )
+
+        data = {
+            "id": currency.id,
+            "currency": currency.currency,
+            "rate": currency.rate,
+            "datetime": currency.datetime,
+        }
+
+        currencies.append(data)
+
+    return jsonify(currencies)
