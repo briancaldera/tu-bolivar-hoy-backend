@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 def get_source() -> dict:
     url = os.getenv("SOURCE_URL")
-    page = urlopen(url, cafile="../assets/_.bcv.org.ve.crt")
+    page = urlopen(url, cafile="assets/_.bcv.org.ve.crt")
     html = page.read().decode("utf-8")
     soup = BeautifulSoup(html, "html.parser")
 

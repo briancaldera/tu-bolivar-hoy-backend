@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta
 
 from firebase_admin import initialize_app, functions
-from firebase_functions import https_fn, options, tasks_fn
+from firebase_functions import https_fn, options, tasks_fn, scheduler_fn
 from firebase_functions.options import RetryConfig
 from flask import jsonify
 from playhouse.db_url import connect
@@ -20,11 +20,10 @@ locale.setlocale(locale.LC_ALL, locale_string)
 initialize_app()
 
 
-@https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["get"]))
-def update_currencies(req: https_fn.Request):
+@scheduler_fn.on_schedule(schedule="every 1 hours synchronized")
+def update_currencies(event: scheduler_fn.ScheduledEvent) -> None:
     currencies: dict = get_source()
     save_to_db(currencies)
-    return https_fn.Response(status=200, response="OK")
 
 
 @https_fn.on_request()
