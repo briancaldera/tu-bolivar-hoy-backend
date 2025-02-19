@@ -6,7 +6,7 @@ from firebase_admin import initialize_app, functions
 from firebase_functions import https_fn, options, tasks_fn, scheduler_fn
 from firebase_functions.options import RetryConfig
 from flask import jsonify
-from playhouse.db_url import connect
+from peewee import PostgresqlDatabase
 
 from db import save_to_db
 from models.Currency import Currency
@@ -21,7 +21,7 @@ initialize_app()
 
 
 @scheduler_fn.on_schedule(schedule="every 1 hours synchronized")
-def update_currencies(event: scheduler_fn.ScheduledEvent) -> None:
+def update_currencies(_: scheduler_fn.ScheduledEvent) -> None:
     currencies: dict = get_source()
     save_to_db(currencies)
 
@@ -45,8 +45,20 @@ def enqueue_initialize_db(_: https_fn.Request) -> https_fn.Response:
     retry_config=RetryConfig(max_attempts=0),
 )
 def initialize_db(req: tasks_fn.CallableRequest) -> bool:
-    database_url = os.getenv("DATABASE_URL")
-    db = connect(database_url)
+    db_host = os.getenv("DB_HOST")
+    db_port = os.getenv("DB_PORT")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_name = os.getenv("DB_NAME")
+
+    db = PostgresqlDatabase(
+        db_name,
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        port=db_port,
+    )
+
     db.connect()
     db.create_tables([Currency])
     return db.close()
