@@ -1,17 +1,21 @@
 import locale
 import os
 from datetime import datetime, timedelta
-
 from firebase_admin import initialize_app, functions
 from firebase_functions import https_fn, options, tasks_fn, scheduler_fn
 from firebase_functions.options import RetryConfig
-from flask import jsonify
 from peewee import PostgresqlDatabase
-
-from db import save_to_db
+from data.source import get_source
+from database.db import save_to_db
 from models.Currency import Currency
-from source import get_source
-from utils import get_function_url
+from utils.utils import get_function_url, close_db
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.teardown_request
+def _db_close(exc) -> None:
+    close_db()
 
 locale_string: str = os.getenv("LOCALE")
 
