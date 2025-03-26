@@ -1,23 +1,11 @@
-from abc import ABC, abstractmethod
+import os
+from datetime import datetime
 from typing import override
 
-from database.supabase_db import SupabaseDB
+from data.exchange_rate_repository import ExchangeRateRepository
+from database.supabase_db import Database
 from models.Currency import Currency
 from valueobjects.valueobjects import Currency as CurrencyName
-from datetime import datetime
-
-
-class ExchangeRateRepository(ABC):
-
-    @abstractmethod
-    def get_exchange_rate_for_period(
-        self, currency: CurrencyName, from_date: datetime, to_date: datetime
-    ) -> list[Currency]:
-        pass
-
-    @abstractmethod
-    def save_batch(self, exchange_rates: list[Currency]):
-        pass
 
 
 class ExchangeRateRepoImpl(ExchangeRateRepository):
@@ -29,7 +17,11 @@ class ExchangeRateRepoImpl(ExchangeRateRepository):
 
         exchange_rate_list: list[Currency] = (
             Currency.select()
-            .where((Currency.currency == currency.value) & (Currency.datetime >= from_date) & (Currency.datetime <= to_date))
+            .where(
+                (Currency.currency == currency.value)
+                & (Currency.datetime >= from_date)
+                & (Currency.datetime <= to_date)
+            )
             .order_by(Currency.datetime.asc())
             .get()
         )
@@ -39,5 +31,5 @@ class ExchangeRateRepoImpl(ExchangeRateRepository):
     @override
     def save_batch(self, exchange_rates: list[Currency]):
 
-        with SupabaseDB.get_connection().atomic():
+        with Database.get_connection().atomic():
             Currency.bulk_create(exchange_rates)
