@@ -5,9 +5,11 @@ from peewee import (
     DateTimeField,
     DecimalField,
 )
+
+from database.database import Database
 from utils.utils import get_db
 
-db = get_db()
+db = Database.get_connection()
 
 
 class Currency(Model):

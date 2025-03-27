@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import override
 
 from data.exchange_rate_repository import ExchangeRateRepository
-from database.supabase_db import Database
+from database.database import Database
 from models.Currency import Currency
 from valueobjects.valueobjects import Currency as CurrencyName
 
