@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Any
 
+
 from firebase_admin import initialize_app, functions
 from firebase_functions import https_fn, options, tasks_fn, scheduler_fn
 from firebase_functions.options import RetryConfig
@@ -22,7 +23,6 @@ app = Flask(__name__)
 @app.teardown_request
 def _db_close(exc) -> None:
     close_db()
-
 
 locale_string: str = os.getenv("LOCALE")
 

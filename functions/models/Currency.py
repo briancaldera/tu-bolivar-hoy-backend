@@ -13,6 +13,7 @@ from database.database import Database
 db = Database.get_connection()
 
 
+
 class Currency(Model):
     id = UUIDField(primary_key=True)  # UUID7
     currency = CharField()  # e. g. USD
@@ -37,3 +38,4 @@ class Currency(Model):
             ).isoformat(),
             "rate": self.rate,
         }
+
