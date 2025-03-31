@@ -1,3 +1,5 @@
+from datetime import datetime as dt
+
 from peewee import (
     Model,
     UUIDField,
@@ -7,7 +9,6 @@ from peewee import (
 )
 
 from database.database import Database
-from utils.utils import get_db
 
 db = Database.get_connection()
 
@@ -21,3 +22,18 @@ class Currency(Model):
     class Meta:
         table_name = "currencies"
         database = db
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "currency": self.currency,
+            "datetime": dt(
+                self.datetime.year,
+                self.datetime.month,
+                self.datetime.day,
+                self.datetime.hour,
+                self.datetime.minute,
+                self.datetime.second,
+            ).isoformat(),
+            "rate": self.rate,
+        }

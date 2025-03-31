@@ -1,21 +1,28 @@
 import locale
 import os
 from datetime import datetime, timedelta
+from typing import Any
+
 from firebase_admin import initialize_app, functions
 from firebase_functions import https_fn, options, tasks_fn, scheduler_fn
 from firebase_functions.options import RetryConfig
+from flask import Flask, jsonify
 from peewee import PostgresqlDatabase
+
 from data.source import get_source
 from database.db import save_to_db
 from models.Currency import Currency
+from services.exchange_rate_service import ExchangeRateService
+
 from utils.utils import get_function_url, close_db
-from flask import Flask, jsonify
 
 app = Flask(__name__)
+
 
 @app.teardown_request
 def _db_close(exc) -> None:
     close_db()
+
 
 locale_string: str = os.getenv("LOCALE")
 
@@ -103,3 +110,27 @@ def get_last_currencies(req: https_fn.Request) -> https_fn.Response:
         currencies.append(data)
 
     return jsonify(currencies)
+
+
+@https_fn.on_call()
+def get_exchange_rate_for_day(req: https_fn.CallableRequest) -> Any:
+    service = ExchangeRateService()
+
+    currency = req.data['currency']
+    day = req.data['date']
+
+    exchange_list = service.exchange_for_day(currency, day)
+
+    data = []
+
+    for exchange in exchange_list:
+        data.append(exchange.to_dict())
+
+    return {
+        'exchange_rate': data
+    }
+
+@https_fn.on_call()
+def test(_req: https_fn.CallableRequest) ->  Any:
+
+    return {'message': "OK Greetings from the emulators!"}

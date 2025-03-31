@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import override
-from database.supabase_db import SupabaseDB, Database
 from models.Currency import Currency
 from valueobjects.valueobjects import Currency as CurrencyName
 from datetime import datetime
-import os
+
 
 class ExchangeRateRepository(ABC):
 
