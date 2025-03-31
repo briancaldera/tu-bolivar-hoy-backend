@@ -1,10 +1,17 @@
-from peewee import Model, UUIDField, CharField, DateTimeField, DecimalField
-import os
-from playhouse.db_url import connect
+from datetime import datetime as dt
 
-database_url = os.getenv("DATABASE_URL")
+from peewee import (
+    Model,
+    UUIDField,
+    CharField,
+    DateTimeField,
+    DecimalField,
+)
 
-db = connect(database_url)
+from database.database import Database
+
+db = Database.get_connection()
+
 
 
 class Currency(Model):
@@ -16,3 +23,19 @@ class Currency(Model):
     class Meta:
         table_name = "currencies"
         database = db
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "currency": self.currency,
+            "datetime": dt(
+                self.datetime.year,
+                self.datetime.month,
+                self.datetime.day,
+                self.datetime.hour,
+                self.datetime.minute,
+                self.datetime.second,
+            ).isoformat(),
+            "rate": self.rate,
+        }
+
