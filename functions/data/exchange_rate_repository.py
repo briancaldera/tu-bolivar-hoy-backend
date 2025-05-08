@@ -13,5 +13,9 @@ class ExchangeRateRepository(ABC):
         pass
 
     @abstractmethod
+    def get_exchange_rate_for_datetime(self, currency: CurrencyName, time: datetime) -> Currency:
+        pass
+
+    @abstractmethod
     def save_batch(self, exchange_rates: list[Currency]):
         pass

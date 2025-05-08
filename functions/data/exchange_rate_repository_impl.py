@@ -44,6 +44,15 @@ class ExchangeRateRepoImpl(ExchangeRateRepository):
         return exchange_rate_list
 
     @override
+    def get_exchange_rate_for_datetime(self, currency: CurrencyName, time: datetime) -> Currency | None:
+        currency: Currency | None = Currency.select().where((Currency.currency == currency.value) & (Currency.datetime == time)).get_or_none()
+
+        if (currency is None):
+            print(f'None value found for {time}')
+
+        return currency
+
+    @override
     def save_batch(self, exchange_rates: list[Currency]):
 
         with Database.get_connection().atomic():

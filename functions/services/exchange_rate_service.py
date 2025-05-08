@@ -18,3 +18,15 @@ class ExchangeRateService:
         currency = CurrencyName(currency)
 
         return self._exchangeRepo.get_exchange_rate_for_period(currency, day, day_end)
+
+    def exchange_for_hours(self, currency_name: str, hours: list[datetime]) -> dict[str, Currency | None]:
+
+        currency = CurrencyName(currency_name)
+
+        result: dict[str, Currency | None] = {}
+
+        for time in hours:
+            rate = self._exchangeRepo.get_exchange_rate_for_datetime(currency, time)
+            result[time.__str__()] = rate
+
+        return result

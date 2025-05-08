@@ -1,21 +1,17 @@
 import locale
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
-
-from firebase_admin import initialize_app, functions
-from firebase_functions import https_fn, options, tasks_fn, scheduler_fn
-from firebase_functions.options import RetryConfig
-from flask import Flask, jsonify
-from peewee import PostgresqlDatabase
+from firebase_admin import initialize_app
+from firebase_functions import https_fn, scheduler_fn
+from flask import Flask
 
 from data.source import get_source
+from database.database import Database
 from database.db import save_to_db
-from models.Currency import Currency
 from services.exchange_rate_service import ExchangeRateService
-
-from utils.utils import get_function_url, close_db
+from utils.utils import close_db
 
 app = Flask(__name__)
 
@@ -23,6 +19,8 @@ app = Flask(__name__)
 @app.teardown_request
 def _db_close(exc) -> None:
     close_db()
+    Database.close_db()
+
 
 locale_string: str = os.getenv("LOCALE")
 
@@ -37,87 +35,12 @@ def update_currencies(_: scheduler_fn.ScheduledEvent) -> None:
     save_to_db(currencies)
 
 
-@https_fn.on_request()
-def enqueue_initialize_db(_: https_fn.Request) -> https_fn.Response:
-    task_queue = functions.task_queue("initialize_db")
-    target_uri = get_function_url("initialize_db")
-
-    start_time = datetime.now() + timedelta(seconds=10)
-
-    body = {"data": {"date": start_time.isoformat()[:10]}}
-
-    task_options = functions.TaskOptions(schedule_time=start_time, uri=target_uri)
-
-    task_queue.enqueue(body, task_options)
-    return https_fn.Response(status=200, response="Enqueued")
-
-
-@tasks_fn.on_task_dispatched(
-    retry_config=RetryConfig(max_attempts=0),
-)
-def initialize_db(req: tasks_fn.CallableRequest) -> bool:
-    db_host = os.getenv("DB_HOST")
-    db_port = os.getenv("DB_PORT")
-    db_user = os.getenv("DB_USER")
-    db_password = os.getenv("DB_PASSWORD")
-    db_name = os.getenv("DB_NAME")
-
-    db = PostgresqlDatabase(
-        db_name,
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        port=db_port,
-    )
-
-    db.connect()
-    db.create_tables([Currency])
-    return db.close()
-
-
-@https_fn.on_request(cors=options.CorsOptions(cors_origins="*", cors_methods=["get"]))
-def get_last_currencies(req: https_fn.Request) -> https_fn.Response:
-
-    currencies_name = [
-        "USD",
-        "EUR",
-        "RUB",
-        "CNY",
-        "TRY",
-    ]
-
-    currencies = []
-
-    for i, v in enumerate(currencies_name):
-
-        currency = (
-            Currency.select(
-                Currency.id, Currency.currency, Currency.rate, Currency.datetime
-            )
-            .where(Currency.currency == v)
-            .order_by(Currency.datetime.desc())
-            .limit(1)
-            .first()
-        )
-
-        data = {
-            "id": currency.id,
-            "currency": currency.currency,
-            "rate": currency.rate,
-            "datetime": currency.datetime,
-        }
-
-        currencies.append(data)
-
-    return jsonify(currencies)
-
-
 @https_fn.on_call()
 def get_exchange_rate_for_day(req: https_fn.CallableRequest) -> Any:
     service = ExchangeRateService()
 
-    currency = req.data['currency']
-    day = req.data['date']
+    currency = req.data["currency"]
+    day = req.data["date"]
 
     exchange_list = service.exchange_for_day(currency, day)
 
@@ -126,11 +49,59 @@ def get_exchange_rate_for_day(req: https_fn.CallableRequest) -> Any:
     for exchange in exchange_list:
         data.append(exchange.to_dict())
 
-    return {
-        'exchange_rate': data
-    }
+    return {"exchange_rate": data}
+
 
 @https_fn.on_call()
-def test(_req: https_fn.CallableRequest) ->  Any:
+def get_exchange_rate_for_hours(req: https_fn.CallableRequest) -> Any:
+    service = ExchangeRateService()
 
-    return {'message': "OK Greetings from the emulators!"}
+    iso_hours = req.data["hours"]
+
+    currency = req.data["currency"]
+
+    hours = []
+
+    for iso_hour in iso_hours:
+        hour = datetime.fromisoformat(iso_hour)
+        filtered_hour = datetime(
+            year=hour.year, month=hour.month, day=hour.day, hour=hour.hour
+        )
+        hours.append(filtered_hour)
+
+    res = service.exchange_for_hours(currency, hours)
+
+    data = {}
+
+    for hour, rate in res.items():
+        if rate is not None:
+            data[hour] = rate.to_dict()
+        else:
+            data[hour] = rate
+
+    return {"exchange_rate_map": data}
+
+@scheduler_fn.on_schedule(schedule="every 1 days synchronized")
+def integrity_check():
+    """
+    This function is a placeholder for the integrity check.
+    It will be triggered every day at 00:00 UTC.
+    """
+
+    # Perform the integrity check here
+    # For example, you can check if the database is consistent or if there are any missing records
+    print("Performing integrity check...")
+    # since 2025-02-20 00:00:00, there should be no missing records
+    # each day should have 24 * 5 = 120 records
+    # if any days fails this rule, we take note to find which hours are missing
+    # and then we can send a notification
+
+
+    # You can also send an email or a notification if the integrity check fails
+    # For example, you can use Firebase Cloud Messaging to send a notification
+    print("Integrity check completed.")
+
+@https_fn.on_call()
+def test(_req: https_fn.CallableRequest) -> Any:
+
+    return {"message": "OK Greetings from the emulators!"}
