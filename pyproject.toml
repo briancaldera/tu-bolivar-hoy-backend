@@ -1,0 +1,13 @@
+[project]
+name = "tu-bolivar-hoy-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4==4.13.4",
+    "firebase-admin==6.6.0",
+    "firebase-functions==0.4.2",
+    "flask==3.1.0",
+    "peewee==3.17.9",
+    "protobuf==6.30.2",
+    "uuid6==2024.7.10",
+]
