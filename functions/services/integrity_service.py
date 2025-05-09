@@ -32,7 +32,7 @@ class IntegrityService:
             for failed_day in failed_days:
                 rows = Currency.select().where((Currency.datetime >= failed_day) & (Currency.datetime < (failed_day + timedelta(hours=24))))
                 missing_hours = []
-                for hour in range(0, 23):
+                for hour in range(0, 24):
                     if rows.where(Currency.datetime == failed_day.replace(hour=hour)).count() != 5:
                         missing_hours.append(hour)
 
