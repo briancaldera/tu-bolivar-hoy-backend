@@ -30,7 +30,7 @@ class Database:
                 )
 
         conn = g.db
-        assert conn.connect(reuse_if_open=True)
+        # assert conn.connect(reuse_if_open=True)
         return conn
 
     @staticmethod

@@ -11,6 +11,7 @@ from data.source import get_source
 from database.database import Database
 from database.db import save_to_db
 from services.exchange_rate_service import ExchangeRateService
+from services.integrity_service import IntegrityService
 from utils.utils import close_db
 
 app = Flask(__name__)
@@ -81,25 +82,25 @@ def get_exchange_rate_for_hours(req: https_fn.CallableRequest) -> Any:
 
     return {"exchange_rate_map": data}
 
-@scheduler_fn.on_schedule(schedule="every 1 days synchronized")
-def integrity_check():
+@scheduler_fn.on_schedule(schedule="every day 00:00")
+def integrity_check(_: scheduler_fn.ScheduledEvent) -> None:
     """
-    This function is a placeholder for the integrity check.
+    This function is an integrity check.
     It will be triggered every day at 00:00 UTC.
     """
 
     # Perform the integrity check here
     # For example, you can check if the database is consistent or if there are any missing records
-    print("Performing integrity check...")
     # since 2025-02-20 00:00:00, there should be no missing records
     # each day should have 24 * 5 = 120 records
-    # if any days fails this rule, we take note to find which hours are missing
+    # if any days fails this rule, we take note to find which hours are missing,
     # and then we can send a notification
 
+    integrity_service = IntegrityService()
+    integrity_service.check_integrity()
 
     # You can also send an email or a notification if the integrity check fails
     # For example, you can use Firebase Cloud Messaging to send a notification
-    print("Integrity check completed.")
 
 @https_fn.on_call()
 def test(_req: https_fn.CallableRequest) -> Any:
