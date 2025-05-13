@@ -1,0 +1,7 @@
+from exchange_rate.adapter.output.database.connection import db_wrapper
+
+
+class BaseModel(db_wrapper.Model):
+    """
+    Base model for all models in the application.
+    """
