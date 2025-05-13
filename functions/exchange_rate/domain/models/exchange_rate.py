@@ -1,8 +1,6 @@
 from datetime import datetime
 
-from exchange_rate.domain.value_objects.currency import Currency
-from exchange_rate.domain.value_objects.exchange_id import ExchangeID
-from exchange_rate.domain.value_objects.rate import Rate
+from exchange_rate.domain.value_objects import ExchangeID, Currency, Rate
 
 
 class ExchangeRate:
@@ -17,3 +15,12 @@ class ExchangeRate:
         self.currency: Currency = currency
         self.rate: Rate | None = rate
         self.created_at: datetime = created_at
+
+    @staticmethod
+    def create(
+        exchange_id: ExchangeID | None,
+        currency: Currency,
+        rate: Rate | None,
+        created_at: datetime,
+    ):
+        return ExchangeRate(exchange_id, currency, rate, created_at)
