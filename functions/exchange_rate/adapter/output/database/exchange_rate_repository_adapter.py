@@ -19,7 +19,7 @@ class ExchangeRateRepositoryAdapter(ExchangeRateRepository):
             {
                 "id": exchange_rate.exchange_id.value,
                 "currency": exchange_rate.currency.value,
-                "datetime": exchange_rate.created_at,
+                "registered_at": exchange_rate.created_at,
                 "rate": exchange_rate.rate.value,
             }
             for exchange_rate in exchange_rates
@@ -36,7 +36,7 @@ class ExchangeRateRepositoryAdapter(ExchangeRateRepository):
             ExchangeRateAR.select()
             .where(
                 (ExchangeRateAR.currency == currency.value)
-                & (ExchangeRateAR.datetime == time)
+                & (ExchangeRateAR.registered_at == time)
             )
             .get_or_none()
         )
