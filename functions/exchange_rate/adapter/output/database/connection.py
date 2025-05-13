@@ -17,7 +17,7 @@ _supabase_database = PostgresqlExtDatabase(
     port=_db_port,
 )
 
-app = Flask("tubolivarhoy")
-app.config.from_object("tubolivarhoy")
+app = Flask(__name__.split(".")[0])
+app.config.from_object(__name__.split(".")[0])
 
 db_wrapper = FlaskDB(app, _supabase_database)
