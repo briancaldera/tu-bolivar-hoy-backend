@@ -47,7 +47,7 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
             created_at = timezone.localize(now)
             rate = Rate(Decimal(rate_str))
 
-            exchange_rate = ExchangeRate(None, currency, rate, created_at)
+            exchange_rate = ExchangeRate.create(None, currency, rate, created_at)
             data.append(exchange_rate)
 
         self._exchangeRepo.save_exchange_rates(data)
