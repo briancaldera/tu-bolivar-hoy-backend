@@ -3,7 +3,7 @@ from typing import override
 
 from exchange_rate.adapter.output.database.connection import db_wrapper
 from exchange_rate.adapter.output.database.models.exchange_rate import (
-    ExchangeRate as ExchangeRateAR,
+    ExchangeRateAR,
 )
 from exchange_rate.application.port.output.exchange_rate_repository import (
     ExchangeRateRepository,
