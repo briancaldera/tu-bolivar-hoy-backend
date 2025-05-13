@@ -9,18 +9,18 @@ class ExchangeRate:
         exchange_id: ExchangeID | None,
         currency: Currency,
         rate: Rate | None,
-        created_at: datetime,
+        registered_at: datetime,
     ):
         self.exchange_id: ExchangeID | None = exchange_id
         self.currency: Currency = currency
         self.rate: Rate | None = rate
-        self.created_at: datetime = created_at
+        self.registered_at: datetime = registered_at
 
     @staticmethod
     def create(
         exchange_id: ExchangeID | None,
         currency: Currency,
         rate: Rate | None,
-        created_at: datetime,
+        registered_at: datetime,
     ):
-        return ExchangeRate(exchange_id, currency, rate, created_at)
+        return ExchangeRate(exchange_id, currency, rate, registered_at)

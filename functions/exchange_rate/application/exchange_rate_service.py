@@ -38,16 +38,18 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
     def save_exchange_rates(self, exchange_rates: dict[str, str]) -> None:
         data: list[ExchangeRate] = []
 
+        timezone = pytz.timezone("America/Caracas")
+        now = datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(
+            hours=4
+        )
+        registered_at = timezone.localize(now)
+
+
         for currency_name, rate_str in exchange_rates.items():
             currency = Currency(currency_name)
-            timezone = pytz.timezone("America/Caracas")
-            now = datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(
-                hours=4
-            )
-            created_at = timezone.localize(now)
             rate = Rate(Decimal(rate_str))
 
-            exchange_rate = ExchangeRate.create(None, currency, rate, created_at)
+            exchange_rate = ExchangeRate.create(None, currency, rate, registered_at)
             data.append(exchange_rate)
 
         self._exchangeRepo.save_exchange_rates(data)
