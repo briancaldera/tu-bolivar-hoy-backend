@@ -47,7 +47,7 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
             currency = Currency(currency_name)
             rate = Rate(Decimal(rate_str))
 
-            exchange_rate = ExchangeRate.create(None, currency, rate, registered_at)
+            exchange_rate = ExchangeRate.create(currency, rate, registered_at)
             data.append(exchange_rate)
 
         self._exchangeRepo.save_exchange_rates(data)
