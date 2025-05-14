@@ -18,10 +18,22 @@ class IntegrityService:
         now = datetime.now().replace(minute=0, second=0, microsecond=0)
 
         while current_date < now:
-            rows_count = ExchangeRateAR.select().where((ExchangeRateAR.registered_at >= current_date) & (ExchangeRateAR.registered_at < (current_date + timedelta(hours=24)))).count()
+            rows_count = (
+                ExchangeRateAR.select()
+                .where(
+                    (ExchangeRateAR.registered_at >= current_date)
+                    & (
+                        ExchangeRateAR.registered_at
+                        < (current_date + timedelta(hours=24))
+                    )
+                )
+                .count()
+            )
             if rows_count != self._NUMBER_OF_ROWS:
                 failed_days.append(current_date)
-                logger.error(f"Integrity check failed for {current_date}: expected {self._NUMBER_OF_ROWS} rows, found {rows_count}")
+                logger.error(
+                    f"Integrity check failed for {current_date}: expected {self._NUMBER_OF_ROWS} rows, found {rows_count}"
+                )
 
             current_date += timedelta(days=1)
 
@@ -29,10 +41,22 @@ class IntegrityService:
             logger.info(f"Integrity check completed. Failed days: {failed_days}")
 
             for failed_day in failed_days:
-                rows = ExchangeRateAR.select().where((ExchangeRateAR.registered_at >= failed_day) & (ExchangeRateAR.registered_at < (failed_day + timedelta(hours=24))))
+                rows = ExchangeRateAR.select().where(
+                    (ExchangeRateAR.registered_at >= failed_day)
+                    & (
+                        ExchangeRateAR.registered_at
+                        < (failed_day + timedelta(hours=24))
+                    )
+                )
                 missing_hours = []
                 for hour in range(0, 24):
-                    if rows.where(ExchangeRateAR.registered_at == failed_day.replace(hour=hour)).count() != 5:
+                    if (
+                        rows.where(
+                            ExchangeRateAR.registered_at
+                            == failed_day.replace(hour=hour)
+                        ).count()
+                        != 5
+                    ):
                         missing_hours.append(hour)
 
                 logger.error(f"Missing hours for {failed_day}: {missing_hours}")
