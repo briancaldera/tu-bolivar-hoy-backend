@@ -2,8 +2,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import override
 
-import pytz
-
 from exchange_rate.application.port.input.get_exchange_rate_for_hours_use_case import (
     GetExchangeRateForHoursUseCase,
 )
@@ -39,9 +37,7 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
     def save_exchange_rates(self, exchange_rates: dict[str, str]) -> None:
         data: list[ExchangeRate] = []
 
-        timezone = pytz.timezone("America/Caracas")
-        now = datetime.now().replace(minute=0, second=0, microsecond=0)
-        registered_at = timezone.localize(now)
+        registered_at = datetime.now().replace(minute=0, second=0, microsecond=0)
 
         for currency_name, rate_str in exchange_rates.items():
             currency = Currency(currency_name)
