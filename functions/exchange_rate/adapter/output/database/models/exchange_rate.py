@@ -6,6 +6,8 @@ from playhouse.postgres_ext import (
 )
 
 from exchange_rate.adapter.output.database.models.base_model import BaseModel
+from exchange_rate.domain.models.exchange_rate import ExchangeRate
+from exchange_rate.domain.value_objects import ExchangeID, Currency, Rate
 
 
 class ExchangeRateAR(BaseModel):
@@ -16,3 +18,10 @@ class ExchangeRateAR(BaseModel):
 
     class Meta:
         table_name = "exchange_rates"
+
+    def to_entity(self) -> ExchangeRate:
+        exchange_rate_id = ExchangeID(self.id)
+        currency = Currency(self.currency)
+        rate = Rate(self.rate)
+        registered_at = self.registered_at
+        return ExchangeRate(exchange_rate_id, currency, rate, registered_at)

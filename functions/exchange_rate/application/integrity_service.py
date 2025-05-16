@@ -15,7 +15,7 @@ class IntegrityService:
 
         start_date = datetime(year=2025, month=2, day=20, hour=0, minute=0, second=0)
         current_date = start_date
-        now = datetime.now().replace(minute=0, second=0, microsecond=0)
+        now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         while current_date < now:
             rows_count = (

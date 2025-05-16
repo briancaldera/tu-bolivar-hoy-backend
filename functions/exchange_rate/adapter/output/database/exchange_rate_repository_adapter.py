@@ -44,4 +44,4 @@ class ExchangeRateRepositoryAdapter(ExchangeRateRepository):
         if exchange_rate is None:
             print(f"None value found for {time}")
 
-        return exchange_rate
+        return exchange_rate.to_entity() if exchange_rate else None
