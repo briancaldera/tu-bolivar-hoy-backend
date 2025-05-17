@@ -1,12 +1,12 @@
 import locale
 import os
+from datetime import datetime
 from typing import Any
 
 from firebase_admin import initialize_app, functions
 from firebase_functions import https_fn, scheduler_fn, tasks_fn
 from firebase_functions import logger
 from firebase_functions.options import RetryConfig, RateLimits
-from datetime import datetime, timedelta
 
 from exchange_rate.functions import (
     check_integrity,
@@ -32,7 +32,9 @@ def enqueue_fetch_exchange_rates(_: scheduler_fn.ScheduledEvent) -> None:
         dispatch_deadline_seconds = 60 * 30
 
         task_options = functions.TaskOptions(
-            dispatch_deadline_seconds=dispatch_deadline_seconds, uri=target_uri
+            schedule_delay_seconds=0,
+            dispatch_deadline_seconds=dispatch_deadline_seconds,
+            uri=target_uri,
         )
 
         now = datetime.now().isoformat()[:10]
