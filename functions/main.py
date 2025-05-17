@@ -2,14 +2,18 @@ import locale
 import os
 from typing import Any
 
-from firebase_admin import initialize_app
-from firebase_functions import https_fn, scheduler_fn
+from firebase_admin import initialize_app, functions
+from firebase_functions import https_fn, scheduler_fn, tasks_fn
+from firebase_functions import logger
+from firebase_functions.options import RetryConfig, RateLimits
+from datetime import datetime, timedelta
 
 from exchange_rate.functions import (
     check_integrity,
     fetch_exchange_rates,
     retrieve_exchange_rate_for_hours,
 )
+from utils.utils import get_function_url
 
 locale_string: str = os.getenv("LOCALE")
 
@@ -19,7 +23,37 @@ initialize_app()
 
 
 @scheduler_fn.on_schedule(schedule="every 1 hours synchronized")
-def update_currencies(_: scheduler_fn.ScheduledEvent) -> None:
+def enqueue_fetch_exchange_rates(_: scheduler_fn.ScheduledEvent) -> None:
+    logger.info("Enqueueing fetch_exchange_rates task")
+    try:
+        task_queue = functions.task_queue("taskfetchexchangerates")
+        target_uri = get_function_url("taskfetchexchangerates")
+
+        dispatch_deadline_seconds = 60 * 30
+
+        task_options = functions.TaskOptions(
+            dispatch_deadline_seconds=dispatch_deadline_seconds, uri=target_uri
+        )
+
+        now = datetime.now().isoformat()[:10]
+        body = {"data": {"date": now}}
+
+        task_queue.enqueue(body, task_options)
+        logger.info("Task enqueued successfully")
+    except Exception as e:
+        logger.error(f"Error enqueuing task: {e}")
+        raise
+
+
+@tasks_fn.on_task_dispatched(
+    retry_config=RetryConfig(max_attempts=10, min_backoff_seconds=60 * 3),
+    rate_limits=RateLimits(max_concurrent_dispatches=1),
+)
+def taskfetchexchangerates(_: tasks_fn.CallableRequest) -> None:
+    """
+    This function is a scheduled function that runs every hour.
+    It fetches the latest exchange rates and saves them to the database.
+    """
     fetch_exchange_rates()
 
 

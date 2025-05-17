@@ -13,6 +13,7 @@ from exchange_rate.application.port.output.exchange_rate_repository import (
 )
 from exchange_rate.domain.models.exchange_rate import ExchangeRate
 from exchange_rate.domain.value_objects import Currency, Rate
+from firebase_functions import logger
 
 
 class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCase):
@@ -35,9 +36,16 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
 
     @override
     def save_exchange_rates(self, exchange_rates: dict[str, str]) -> None:
-        data: list[ExchangeRate] = []
-
+        # check if there are already exchange rates for the current hour
+        # if so do not save the new exchange rates
         registered_at = datetime.now().replace(minute=0, second=0, microsecond=0)
+        count = self._exchangeRepo.get_exchange_rate_count_for_hour(registered_at)
+
+        if count > 0:
+            logger.warn(f"Exchange rates already exist for {registered_at}")
+            return
+
+        data: list[ExchangeRate] = []
 
         for currency_name, rate_str in exchange_rates.items():
             currency = Currency(currency_name)
@@ -46,4 +54,6 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
             exchange_rate = ExchangeRate.create(currency, rate, registered_at)
             data.append(exchange_rate)
 
+        logger.info("Saving exchange rates...")
         self._exchangeRepo.save_exchange_rates(data)
+        logger.info("Exchange rates saved successfully")

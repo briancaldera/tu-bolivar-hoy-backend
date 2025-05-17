@@ -45,3 +45,11 @@ class ExchangeRateRepositoryAdapter(ExchangeRateRepository):
             print(f"None value found for {time}")
 
         return exchange_rate.to_entity() if exchange_rate else None
+
+    @override
+    def get_exchange_rate_count_for_hour(self, time: datetime) -> int:
+        count = (
+            ExchangeRateAR.select().where(ExchangeRateAR.registered_at == time).count()
+        )
+
+        return count

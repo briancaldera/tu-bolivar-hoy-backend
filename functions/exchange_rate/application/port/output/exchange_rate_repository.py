@@ -15,3 +15,7 @@ class ExchangeRateRepository(ABC):
         self, currency: Currency, time: datetime
     ) -> ExchangeRate | None:
         pass
+
+    @abstractmethod
+    def get_exchange_rate_count_for_hour(self, time: datetime) -> int:
+        pass
