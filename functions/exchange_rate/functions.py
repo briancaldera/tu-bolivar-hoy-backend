@@ -16,8 +16,17 @@ def fetch_exchange_rates() -> None:
     exchange_rate_repository = ExchangeRateRepositoryAdapter()
     exchange_rate_service = ExchangeRateService(exchange_rate_repository)
 
-    currencies = extract_data()
-    exchange_rate_service.save_exchange_rates(currencies)
+    try:
+        currencies = extract_data()
+        exchange_rate_service.save_exchange_rates(currencies)
+    except Exception as exc:
+        # If an error occurs, check the current time.
+        # If it's past the half-hour mark, attempt to recover by using the previous rate.
+        now = datetime.now()
+        if now.minute >= 30:
+            exchange_rate_service.error_condition()
+        else:
+            raise exc
 
 
 def retrieve_exchange_rate_for_hours(currency: str, iso_hours: list[str]) -> Any:

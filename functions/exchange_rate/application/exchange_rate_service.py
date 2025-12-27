@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import override
+from datetime import timedelta
 
 from exchange_rate.application.port.input.get_exchange_rate_for_hours_use_case import (
     GetExchangeRateForHoursUseCase,
@@ -57,3 +58,29 @@ class ExchangeRateService(GetExchangeRateForHoursUseCase, SaveExchangeRatesUseCa
         logger.info("Saving exchange rates...")
         self._exchangeRepo.save_exchange_rates(data)
         logger.info("Exchange rates saved successfully")
+
+    @override
+    def error_condition(self) -> None:
+        """
+        This method is intended to be called when an error condition is detected,
+        specifically when the scheduled job to save exchange rates fails.
+        It attempts to retrieve the exchange rates from the previous hour
+        and save them for the current hour.
+        """
+
+        previous_hour = datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
+
+        currencies = ["USD", "EUR", "RUB", "CNY", "TRY"]
+        currency_dict: dict[str, str] = {}
+
+        for currency in currencies:
+            rate = self._exchangeRepo.get_exchange_rate_for_datetime(Currency(currency), previous_hour)
+
+            if rate is None:
+                logger.error(f"No exchange rate found for {currency} at {previous_hour}. Cannot recover from error.")
+                raise Exception(f"No exchange rate found for {currency} at {previous_hour}. Cannot recover from error.")
+
+
+            currency_dict[currency] = str(rate.rate.value)
+
+        self.save_exchange_rates(currency_dict)
