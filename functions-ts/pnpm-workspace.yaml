@@ -1,5 +1,4 @@
 onlyBuiltDependencies:
   - '@firebase/util'
   - protobufjs
-  - supabase
   - unrs-resolver

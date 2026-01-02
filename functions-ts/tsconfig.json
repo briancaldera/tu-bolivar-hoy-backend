@@ -1,7 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"] },
     "module": "NodeNext",
     "esModuleInterop": true,
     "moduleResolution": "nodenext",
@@ -14,5 +12,7 @@
     "skipLibCheck": true
   },
   "compileOnSave": true,
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }
