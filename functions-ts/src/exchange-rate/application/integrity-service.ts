@@ -2,6 +2,7 @@ import * as logger from 'firebase-functions/logger'
 import { addDays, addHours } from 'date-fns'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '../../../generated/database.types'
+import { assertPresent } from 'ts-extras'
 
 export class IntegrityService {
   private NUMBER_OF_ROWS = 24 * 5
@@ -22,14 +23,14 @@ export class IntegrityService {
     now.setHours(0)
 
     while (currentDate < now) {
-      const rowsCount = (
-        await this.db
-          .schema('private')
-          .from('exchange_rates')
-          .select('registered_at')
-          .gte('registered_at', currentDate)
-          .lt('registered_at', addHours(currentDate, 24))
-      ).count
+      const { count: rowsCount } = await this.db
+        .schema('private')
+        .from('exchange_rates')
+        .select('registered_at', { count: 'exact', head: true })
+        .gte('registered_at', currentDate.toISOString())
+        .lt('registered_at', addHours(currentDate, 24).toISOString())
+
+      assertPresent(rowsCount)
 
       if (rowsCount !== this.NUMBER_OF_ROWS) {
         failedDays.push(currentDate)
@@ -50,9 +51,9 @@ export class IntegrityService {
         const rows = this.db
           .schema('private')
           .from('exchange_rates')
-          .select('registered_at')
-          .gte('registered_at', failedDay)
-          .lt('registered_at', addHours(failedDay, 24))
+          .select('registered_at', { count: 'exact', head: true })
+          .gte('registered_at', failedDay.toISOString())
+          .lt('registered_at', addHours(failedDay, 24).toISOString())
 
         const missingHours = []
 
