@@ -18,6 +18,7 @@ class ExchangeRateAR(BaseModel):
 
     class Meta:
         table_name = "exchange_rates"
+        schema = "private"
 
     def to_entity(self) -> ExchangeRate:
         exchange_rate_id = ExchangeID(self.id)
