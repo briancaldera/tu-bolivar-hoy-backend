@@ -48,22 +48,18 @@ export class IntegrityService {
       )
 
       for (const failedDay of failedDays) {
-        const rows = this.db
-          .schema('private')
-          .from('exchange_rates')
-          .select('registered_at', { count: 'exact', head: true })
-          .gte('registered_at', failedDay.toISOString())
-          .lt('registered_at', addHours(failedDay, 24).toISOString())
-
         const missingHours = []
 
         for (const hour of Array.from({ length: 24 }, (v, t) => t)) {
           failedDay.setHours(hour)
 
-          if (
-            (await rows.eq('registered_at', failedDay.toISOString())).count !==
-            5
-          ) {
+          const { count: rowCount } = await this.db
+            .schema('private')
+            .from('exchange_rates')
+            .select('registered_at', { count: 'exact', head: true })
+            .eq('registered_at', failedDay.toISOString())
+
+          if (rowCount !== 5) {
             missingHours.push(hour)
           }
         }
