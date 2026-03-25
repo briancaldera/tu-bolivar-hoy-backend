@@ -14,6 +14,66 @@ export type Database = {
   }
   private: {
     Tables: {
+      account_type: {
+        Row: {
+          id: number
+          quota: number | null
+          type: string
+        }
+        Insert: {
+          id?: number
+          quota?: number | null
+          type: string
+        }
+        Update: {
+          id?: number
+          quota?: number | null
+          type?: string
+        }
+        Relationships: []
+      }
+      api_key: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          key: string
+          last_used_at: string | null
+          name: string
+          owner_id: string
+          prefix: string
+          revoked_at: string | null
+          scopes: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          key: string
+          last_used_at?: string | null
+          name?: string
+          owner_id: string
+          prefix: string
+          revoked_at?: string | null
+          scopes?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          key?: string
+          last_used_at?: string | null
+          name?: string
+          owner_id?: string
+          prefix?: string
+          revoked_at?: string | null
+          scopes?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exchange_rates: {
         Row: {
           currency: string
@@ -35,9 +95,122 @@ export type Database = {
         }
         Relationships: []
       }
+      organization: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quota_usage: {
+        Row: {
+          id: number
+          usage: number
+          user_id: string
+        }
+        Insert: {
+          id?: number
+          usage?: number
+          user_id: string
+        }
+        Update: {
+          id?: number
+          usage?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_account_type: {
+        Row: {
+          account_type_id: number
+          id: number
+          user_id: string
+        }
+        Insert: {
+          account_type_id: number
+          id?: number
+          user_id?: string
+        }
+        Update: {
+          account_type_id?: number
+          id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_account_type_account_type_id_fkey"
+            columns: ["account_type_id"]
+            isOneToOne: false
+            referencedRelation: "account_type"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users_organization: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_organization_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      latest_exchange_rates: {
+        Row: {
+          currency: string | null
+          id: string | null
+          rate: number | null
+          registered_at: string | null
+        }
+        Relationships: []
+      }
+      user_quota_summary: {
+        Row: {
+          quota: number | null
+          usage: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

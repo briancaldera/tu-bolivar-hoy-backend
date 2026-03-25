@@ -1,6 +1,7 @@
 {
   "name": "functions",
   "scripts": {
+    "prebuild": "pnpm dlx supabase gen types typescript --project-id hwurcromdvurlylkviip --schema private > generated/database.types.ts",
     "build": "tsgo",
     "build:watch": "tsgo --watch",
     "serve": "pnpm run build && firebase emulators:start --only functions",
@@ -27,11 +28,10 @@
     "zod": "^4.3.4"
   },
   "devDependencies": {
-    "@types/node": "^22.19.3",
-    "@typescript/native-preview": "7.0.0-dev.20260217.1",
+    "@types/node": "^25.5.0",
+    "@typescript/native-preview": "7.0.0-dev.20260325.1",
     "firebase-functions-test": "^3.4.1",
-    "prettier": "3.8.1",
-    "typescript": "^5.7.3"
+    "prettier": "3.8.1"
   },
   "private": true
 }
