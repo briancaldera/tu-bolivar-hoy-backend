@@ -28,6 +28,15 @@ export class ExchangeRate {
     }
   }
 
+  static fromJSON(
+    id: string,
+    currency: string,
+    rate: number,
+    registered_at: string,
+  ) {
+    return new ExchangeRate(id, currency, rate, new Date(registered_at))
+  }
+
   static create(currency: string, rate: number | null, registered_at: Date) {
     const id = uuid7()
     return new ExchangeRate(id, currency, rate, registered_at)
