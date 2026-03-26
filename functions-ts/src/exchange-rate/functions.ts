@@ -12,8 +12,6 @@ import fetch from 'node-fetch'
 import { z } from 'zod'
 import { compareDesc, isBefore } from 'date-fns'
 import { IntegrityService } from './application/integrity-service'
-import { AuthService } from '../auth/application/auth-service'
-import { Request } from 'firebase-functions/https'
 
 const TARGET_URL = 'https://www.bcv.org.ve/'
 
@@ -232,11 +230,8 @@ export async function checkIntegrity() {
   await integrityService.checkIntegrity()
 }
 
-export async function getLatestExchangeRates(req: Request): Promise<object> {
+export async function getLatestExchangeRates(): Promise<object> {
   const supabase = createSupabaseClient()
-
-  const authService = new AuthService(supabase)
-  await authService.processRequest(req)
 
   const { data: exchange_rates, error } = await supabase
     .from('latest_exchange_rates')

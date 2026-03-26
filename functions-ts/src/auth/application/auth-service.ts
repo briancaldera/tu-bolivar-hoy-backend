@@ -5,13 +5,13 @@ import { z } from 'zod'
 import { createHash } from 'node:crypto'
 import { assertPresent } from 'ts-extras'
 import { QuotaExceededError } from '../../exchange-rate/errors/quota-exceeded-error'
-import { Request } from 'firebase-functions/https'
+import { FastifyRequest } from 'fastify'
 
 export class AuthService {
   constructor(private readonly database: SupabaseClient<Database>) {}
 
-  async processRequest(request: Request) {
-    const keyHeader = request.header('x-api-key')
+  async processRequest(request: FastifyRequest) {
+    const keyHeader = request.headers['x-api-key']
 
     if (!keyHeader) throw new UnauthenticatedError()
 

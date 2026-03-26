@@ -11,6 +11,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { onSchedule } from 'firebase-functions/scheduler'
 import { onCall, onRequest } from 'firebase-functions/https'
 import { ZodError } from 'zod'
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify'
 import {
   checkIntegrity,
   fetchExchangeRates,
@@ -20,6 +21,8 @@ import {
 import { UnauthenticatedError } from './auth/errors/unauthenticated-error'
 import { QuotaExceededError } from './exchange-rate/errors/quota-exceeded-error'
 import { createHash } from 'node:crypto'
+import { AuthService } from './auth/application/auth-service'
+import { createAdminSupabaseClient } from './exchange-rate/infrastructure/supabase/client'
 
 initializeApp({
   storageBucket: 'tubolivarhoy.firebasestorage.app',
@@ -62,48 +65,110 @@ export const integrityCheck = onSchedule(
   async (_event): Promise<void> => await checkIntegrity(),
 )
 
-export const latest_exchange_rates = onRequest(
-  { cors: true },
-  async (req, res): Promise<void> => {
-    try {
-      switch (req.method) {
-        case 'GET':
-          const result = await getLatestExchangeRates(req)
+// export const latest_exchange_rates = onRequest(
+//   { cors: true },
+//   async (req, res): Promise<void> => {
+//     try {
+//       switch (req.method) {
+//         case 'GET':
+//           const result = await getLatestExchangeRates(req)
+//
+//           const hash = createHash('md5')
+//             .update(JSON.stringify(result))
+//             .digest('hex')
+//
+//           const eTag = `"${hash}"`
+//
+//           if (
+//             req.headers['if-none-match'] &&
+//             req.headers['if-none-match'] === eTag
+//           ) {
+//             res.status(304)
+//           } else {
+//             res
+//               .setHeader('Cache-Control', 'public, max-age=60')
+//               .setHeader('ETag', eTag)
+//               .status(200)
+//               .json(result)
+//           }
+//           break
+//         default:
+//           res.status(405).json('Method Not Allowed')
+//       }
+//     } catch (e) {
+//       if (e instanceof UnauthenticatedError) {
+//         res.status(401).json('Unauthorized')
+//       } else if (e instanceof ZodError) {
+//         res.status(400).json('Bad request')
+//       } else if (e instanceof QuotaExceededError) {
+//         res.status(429).json('Quota exceeded')
+//       } else {
+//         res.status(500).json('Internal Server Error')
+//       }
+//     } finally {
+//       res.end()
+//     }
+//   },
+// )
 
-          const hash = createHash('md5')
-            .update(JSON.stringify(result))
-            .digest('hex')
+const app = Fastify()
+app.setErrorHandler((error, request, reply) => {
+  if (error instanceof UnauthenticatedError) {
+    return reply.status(401).send('Unauthorized')
+  } else if (error instanceof ZodError) {
+    return reply.status(400).send('Bad request')
+  } else if (error instanceof QuotaExceededError) {
+    return reply.status(429).send('Quota exceeded')
+  } else {
+    return reply.status(500).send('Internal Server Error')
+  }
+})
 
-          const eTag = `"${hash}"`
+app.addHook('preHandler', async (req: FastifyRequest, res: FastifyReply) => {
+  const supabase = createAdminSupabaseClient()
+  const authService = new AuthService(supabase)
+  await authService.processRequest(req)
+})
 
-          if (
-            req.headers['if-none-match'] &&
-            req.headers['if-none-match'] === eTag
-          ) {
-            res.status(304)
-          } else {
-            res
-              .setHeader('Cache-Control', 'public, max-age=60')
-              .setHeader('ETag', eTag)
-              .status(200)
-              .json(result)
-          }
-          break
-        default:
-          res.status(405).json('Method Not Allowed')
-      }
-    } catch (e) {
-      if (e instanceof UnauthenticatedError) {
-        res.status(401).json('Unauthorized')
-      } else if (e instanceof ZodError) {
-        res.status(400).json('Bad request')
-      } else if (e instanceof QuotaExceededError) {
-        res.status(429).json('Quota exceeded')
+app.register(
+  async (instance) => {
+    instance.get('/latest-rates', async (req, res) => {
+      const result = await getLatestExchangeRates()
+
+      const hash = createHash('md5')
+        .update(JSON.stringify(result))
+        .digest('hex')
+
+      const eTag = `"${hash}"`
+
+      if (
+        req.headers['if-none-match'] &&
+        req.headers['if-none-match'] === eTag
+      ) {
+        res.status(304).send()
       } else {
-        res.status(500).json('Internal Server Error')
+        res
+          .header('Cache-Control', 'public, max-age=60')
+          .header('ETag', eTag)
+          .status(200)
+          .send(result)
       }
-    } finally {
-      res.end()
-    }
+    })
+  },
+  { prefix: '/v1' },
+)
+
+export const api = onRequest(
+  {
+    cors: true,
+    timeoutSeconds: 10,
+    region: 'us-east4',
+    maxInstances: 3,
+    minInstances: 0,
+    serviceAccount: 'api-service-agent@tubolivarhoy.iam.gserviceaccount.com',
+  },
+  async (req, res) => {
+    await app.ready()
+    app.server.emit('request', req, res)
   },
 )
