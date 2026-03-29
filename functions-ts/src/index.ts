@@ -23,6 +23,7 @@ import { QuotaExceededError } from './exchange-rate/errors/quota-exceeded-error'
 import { createHash } from 'node:crypto'
 import { AuthService } from './auth/application/auth-service'
 import { createAdminSupabaseClient } from './exchange-rate/infrastructure/supabase/client'
+import { logger } from 'firebase-functions/logger'
 
 initializeApp({
   storageBucket: 'tubolivarhoy.firebasestorage.app',
@@ -65,61 +66,19 @@ export const integrityCheck = onSchedule(
   async (_event): Promise<void> => await checkIntegrity(),
 )
 
-// export const latest_exchange_rates = onRequest(
-//   { cors: true },
-//   async (req, res): Promise<void> => {
-//     try {
-//       switch (req.method) {
-//         case 'GET':
-//           const result = await getLatestExchangeRates(req)
-//
-//           const hash = createHash('md5')
-//             .update(JSON.stringify(result))
-//             .digest('hex')
-//
-//           const eTag = `"${hash}"`
-//
-//           if (
-//             req.headers['if-none-match'] &&
-//             req.headers['if-none-match'] === eTag
-//           ) {
-//             res.status(304)
-//           } else {
-//             res
-//               .setHeader('Cache-Control', 'public, max-age=60')
-//               .setHeader('ETag', eTag)
-//               .status(200)
-//               .json(result)
-//           }
-//           break
-//         default:
-//           res.status(405).json('Method Not Allowed')
-//       }
-//     } catch (e) {
-//       if (e instanceof UnauthenticatedError) {
-//         res.status(401).json('Unauthorized')
-//       } else if (e instanceof ZodError) {
-//         res.status(400).json('Bad request')
-//       } else if (e instanceof QuotaExceededError) {
-//         res.status(429).json('Quota exceeded')
-//       } else {
-//         res.status(500).json('Internal Server Error')
-//       }
-//     } finally {
-//       res.end()
-//     }
-//   },
-// )
-
 const app = Fastify()
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof UnauthenticatedError) {
+    logger.warn(error, request)
     return reply.status(401).send('Unauthorized')
   } else if (error instanceof ZodError) {
+    logger.info(error, request)
     return reply.status(400).send('Bad request')
   } else if (error instanceof QuotaExceededError) {
+    logger.info(error, request)
     return reply.status(429).send('Quota exceeded')
   } else {
+    logger.error(error, request)
     return reply.status(500).send('Internal Server Error')
   }
 })
@@ -145,8 +104,11 @@ app.register(
         req.headers['if-none-match'] &&
         req.headers['if-none-match'] === eTag
       ) {
+        logger.info(`Response not modified for etag: ${eTag}`)
+        logger.info('Sending response')
         res.status(304).send()
       } else {
+        logger.info('Sending response')
         res
           .header('Cache-Control', 'public, max-age=60')
           .header('ETag', eTag)
@@ -161,7 +123,7 @@ app.register(
 export const api = onRequest(
   {
     cors: true,
-    timeoutSeconds: 10,
+    timeoutSeconds: 30,
     region: 'us-east4',
     maxInstances: 3,
     minInstances: 0,
@@ -169,6 +131,7 @@ export const api = onRequest(
   },
   async (req, res) => {
     await app.ready()
+    logger.info('Request received...', req)
     app.server.emit('request', req, res)
   },
 )

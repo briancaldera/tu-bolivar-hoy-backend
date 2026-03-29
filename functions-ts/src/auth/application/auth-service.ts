@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { assertPresent } from 'ts-extras'
 import { QuotaExceededError } from '../../exchange-rate/errors/quota-exceeded-error'
 import { FastifyRequest } from 'fastify'
+import { logger } from 'firebase-functions/logger'
 
 export class AuthService {
   constructor(private readonly database: SupabaseClient<Database>) {}
@@ -35,11 +36,11 @@ export class AuthService {
     if (error) throw error
 
     if (!apiKeyObject) {
-      console.warn('Invalid API key received')
+      logger.warn('Invalid API key received')
       throw new UnauthenticatedError()
     }
 
-    console.log('Request with valid API key received')
+    logger.info('Request with valid API key received')
 
     // Fire and forget (or use a background task)
     this.database
