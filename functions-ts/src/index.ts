@@ -10,20 +10,27 @@
 import { initializeApp } from 'firebase-admin/app'
 import { onSchedule } from 'firebase-functions/scheduler'
 import { onCall, onRequest } from 'firebase-functions/https'
-import { ZodError } from 'zod'
-import Fastify, { FastifyRequest, FastifyReply } from 'fastify'
+import { z, ZodError } from 'zod'
+import Fastify, { FastifyReply, FastifyRequest } from 'fastify'
 import {
+  checkHealth,
   checkIntegrity,
   fetchExchangeRates,
+  getExchangeRateForCurrency,
   getExchangeRateForPeriod,
   getLatestExchangeRates,
 } from './exchange-rate/functions'
 import { UnauthenticatedError } from './auth/errors/unauthenticated-error'
 import { QuotaExceededError } from './exchange-rate/errors/quota-exceeded-error'
-import { createHash } from 'node:crypto'
 import { AuthService } from './auth/application/auth-service'
 import { createAdminSupabaseClient } from './exchange-rate/infrastructure/supabase/client'
 import { logger } from 'firebase-functions/logger'
+import {
+  serializerCompiler,
+  validatorCompiler,
+  ZodTypeProvider,
+} from 'fastify-type-provider-zod'
+import Etag from '@fastify/etag'
 
 initializeApp({
   storageBucket: 'tubolivarhoy.firebasestorage.app',
@@ -66,7 +73,13 @@ export const integrityCheck = onSchedule(
   async (_event): Promise<void> => await checkIntegrity(),
 )
 
-const app = Fastify()
+const app = Fastify().withTypeProvider<ZodTypeProvider>()
+
+app.register(Etag)
+
+app.setValidatorCompiler(validatorCompiler)
+app.setSerializerCompiler(serializerCompiler)
+
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof UnauthenticatedError) {
     logger.warn(error, request)
@@ -83,42 +96,65 @@ app.setErrorHandler((error, request, reply) => {
   }
 })
 
-app.addHook('preHandler', async (req: FastifyRequest, res: FastifyReply) => {
-  const supabase = createAdminSupabaseClient()
-  const authService = new AuthService(supabase)
-  await authService.processRequest(req)
-})
-
 app.register(
   async (instance) => {
+    instance.addHook(
+      'preHandler',
+      async (req: FastifyRequest, res: FastifyReply) => {
+        const supabase = createAdminSupabaseClient()
+        const authService = new AuthService(supabase)
+        await authService.processRequest(req)
+      },
+    )
+
     instance.get('/latest-rates', async (req, res) => {
       const result = await getLatestExchangeRates()
 
-      const hash = createHash('md5')
-        .update(JSON.stringify(result))
-        .digest('hex')
-
-      const eTag = `"${hash}"`
-
-      if (
-        req.headers['if-none-match'] &&
-        req.headers['if-none-match'] === eTag
-      ) {
-        logger.info(`Response not modified for etag: ${eTag}`)
-        logger.info('Sending response')
-        res.status(304).send()
-      } else {
-        logger.info('Sending response')
-        res
-          .header('Cache-Control', 'public, max-age=60')
-          .header('ETag', eTag)
-          .status(200)
-          .send(result)
-      }
+      res.header('cache-control', 'private, max-age=60')
+      return result
     })
+
+    instance.withTypeProvider<ZodTypeProvider>().get(
+      '/currency/:currency',
+      {
+        schema: {
+          params: z.object({
+            currency: z.enum(['usd', 'eur', 'try', 'rub', 'cny']),
+          }),
+          querystring: z.object({
+            datetime: z.iso.date().optional(),
+          }),
+        },
+      },
+      async (req, res) => {
+        const result = await getExchangeRateForCurrency(req.params.currency)
+
+        res.header('cache-control', 'private, max-age=60')
+
+        return {
+          rate: result,
+        }
+      },
+    )
   },
   { prefix: '/v1' },
 )
+
+app.get('/health', {}, async (_, res) => {
+  const status = await checkHealth()
+
+  res.header('cache-control', 'public, max-age=180')
+
+  if (status) {
+    return {
+      status: 'pass',
+    }
+  } else {
+    return {
+      status: 'fail',
+    }
+  }
+})
 
 export const api = onRequest(
   {

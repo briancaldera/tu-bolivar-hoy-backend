@@ -144,7 +144,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          account_type_id: number
+          account_type_id?: number
           id?: number
           user_id?: string
         }

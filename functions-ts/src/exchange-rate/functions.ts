@@ -12,6 +12,7 @@ import fetch from 'node-fetch'
 import { z } from 'zod'
 import { compareDesc, isBefore } from 'date-fns'
 import { IntegrityService } from './application/integrity-service'
+import { assertPresent } from 'ts-extras'
 
 const TARGET_URL = 'https://www.bcv.org.ve/'
 
@@ -249,4 +250,59 @@ export async function getLatestExchangeRates(): Promise<object> {
   )
 
   return data.sort((a, b) => a.currency.localeCompare(b.currency))
+}
+
+export async function getExchangeRateForCurrency(
+  currency: Lowercase<Currency>,
+  date?: string,
+): Promise<number | null> {
+  const db = createSupabaseClient()
+
+  if (date) {
+    const registeredAt = new Date(date)
+    registeredAt.setHours(0, 0, 0, 0)
+    const { data, error } = await db
+      .from('exchange_rates')
+      .select('*')
+      .eq('currency', currency.toUpperCase())
+      .eq('registered_at', registeredAt.toISOString())
+
+    if (error) throw error
+
+    const result = data[0]
+    assertPresent(result)
+
+    return result.rate
+  } else {
+    const { data, error } = await db
+      .from('exchange_rates')
+      .select('*')
+      .eq('currency', currency.toUpperCase())
+      .order('registered_at', { ascending: false })
+      .limit(1)
+
+    if (error) throw error
+
+    const result = data[0]
+    assertPresent(result)
+
+    return result.rate
+  }
+}
+
+export async function checkHealth(): Promise<boolean> {
+  try {
+    const supabase = createSupabaseClient()
+    const { error } = await supabase
+      .from('exchange_rates')
+      .select('*', { head: true })
+      .limit(1)
+    if (error) throw error
+
+    logger.log('Service is OK')
+    return true
+  } catch (e) {
+    logger.error(e)
+    return false
+  }
 }
